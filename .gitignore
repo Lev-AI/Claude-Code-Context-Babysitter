@@ -1,0 +1,13 @@
+# Runtime state (created by the scripts)
+experiments/**/.state/
+.session_bridge/
+
+# Local config overrides (Install-Heavy creates config.local.json)
+experiments/**/config.local.json
+config.local.json
+
+# Logs
+*.log
+
+# Local-only docs (not published)
+*.ru.md

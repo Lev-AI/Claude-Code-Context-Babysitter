@@ -1,0 +1,18 @@
+{
+  "experiment_name": "powershell_auto_continue",
+  "enabled": false,
+  "mode": "notify_only",
+  "comment_modes": "notify_only | wait_and_continue",
+  "margin_seconds": 60,
+  "usage_file": "../../.session_bridge/usage.json",
+  "retry_message": "Continue where you left off after the usage limit reset. Re-read PROGRESS.md if present. Prefer the last agreed plan; do not re-litigate architecture unless blocked. Proceed autonomously.",
+  "claude_command": "claude",
+  "claude_args": ["-c"],
+  "new_window": true,
+  "notify": {
+    "beep": true,
+    "balloon": true,
+    "toast": false
+  },
+  "strict_future_reset": false
+}

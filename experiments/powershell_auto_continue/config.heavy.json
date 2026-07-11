@@ -1,0 +1,61 @@
+{
+  "experiment_name": "powershell_auto_continue_heavy",
+  "enabled": true,
+  "mode": "heavy_reliable",
+  "comment": "Heavy reliable path: statusLine usage + watch + wait + claude -c/--resume -p. No SendKeys.",
+
+  "usage_file": "../../.session_bridge/usage.json",
+  "state_file": ".state/runtime.json",
+  "log_dir": ".state/logs",
+
+  "project_cwd": "",
+  "session_name": "",
+  "comment_session": "Set session_name if you start with: claude -n my-task",
+
+  "thresholds": {
+    "maintain_percent": 95,
+    "limit_percent": 99.5,
+    "usage_file_max_age_seconds": 900
+  },
+
+  "watch": {
+    "poll_seconds": 30,
+    "enabled": true
+  },
+
+  "wait": {
+    "margin_seconds": 90,
+    "max_wait_hours": 6,
+    "chunk_sleep_seconds": 30
+  },
+
+  "continue": {
+    "claude_command": "claude",
+    "mode": "both",
+    "comment_mode": "headless | interactive | both (headless first, then interactive window)",
+    "new_window": true,
+    "max_attempts": 3,
+    "retry_delay_seconds": 25,
+    "retry_message": "Continue where you left off after the usage limit reset. Re-read PROGRESS.md if present. Prefer the last agreed plan; do not re-litigate architecture unless blocked. Proceed autonomously."
+  },
+
+  "notify": {
+    "on_limit_detected": true,
+    "on_continue": true,
+    "beep": true
+  },
+
+  "keepalive": {
+    "enabled": true,
+    "ping_after_idle_minutes": 50,
+    "poll_seconds": 60,
+    "message": "ACK only: context keep-alive. Do not run tools. Reply with OK.",
+    "max_consecutive_pings": 8,
+    "comment": "Ping-Session.ps1: headless --resume ping refreshes ~1h prompt cache while session is idle. Costs a cache read (~10%) per ping."
+  },
+
+  "maintain": {
+    "call_session_bridge": true,
+    "session_bridge_once": true
+  }
+}
