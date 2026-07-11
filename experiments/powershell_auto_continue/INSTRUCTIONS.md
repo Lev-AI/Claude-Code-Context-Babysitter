@@ -10,7 +10,7 @@ a warm session costs ~10% of the context price instead of the full price.
 
 ```text
 statusLine → usage.json → watcher (usage limit? wait → claude --resume) 
-                        → pinger  (idle ≥50 min? ping → cache stays warm)
+                        → pinger  (idle 45–55 min? ping → cache stays warm)
 ```
 
 ---
@@ -61,7 +61,7 @@ Three windows will open:
 |------|-----------|
 | **Claude** | `claude -n <folder-name>` — this is where you work |
 | watcher (minimized) | waits for the usage limit → continues the session on its own after the reset |
-| pinger (minimized) | pings the session when idle ≥50 min — keeps the cache warm |
+| pinger (minimized) | pings the session after a random 45–55 min of idle — keeps the cache warm |
 
 In the Claude window: `Shift+Tab` → **Auto Mode**, and keep `PROGRESS.md`
 updated (ask Claude to update it as it works).

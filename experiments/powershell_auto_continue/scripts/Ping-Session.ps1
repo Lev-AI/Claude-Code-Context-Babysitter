@@ -4,8 +4,9 @@
   Keepalive pinger: keeps a named Claude session's prompt cache warm via headless --resume pings.
 
 .DESCRIPTION
-  While the session is idle (its history file unchanged for ping_after_idle_minutes)
-  and not rate-limited, sends:
+  While the session is idle (its history file unchanged for a random interval
+  between ping_idle_min_minutes and ping_idle_max_minutes, default 45-55 min,
+  seconds precision, re-drawn after every ping) and not rate-limited, sends:
 
       claude --resume <SessionName> -p "<ACK message>"
 
@@ -37,8 +38,26 @@ $ErrorActionPreference = "Stop"
 $cfg = Read-HeavyConfig -ConfigPath $ConfigPath
 $ka = Get-Prop $cfg "keepalive"
 $enabled = [bool](Get-Prop $ka "enabled" $true)
-$idleMin = [double](Get-Prop $ka "ping_after_idle_minutes" 50)
+# Random idle target between min and max (seconds precision), re-drawn after
+# every ping so the cadence never looks mechanical. A legacy fixed
+# ping_after_idle_minutes value is honored as min = max.
+$legacyIdle = Get-Prop $ka "ping_after_idle_minutes"
+$idleMinM = [double](Get-Prop $ka "ping_idle_min_minutes" $(if ($null -ne $legacyIdle) { $legacyIdle } else { 45 }))
+$idleMaxM = [double](Get-Prop $ka "ping_idle_max_minutes" $(if ($null -ne $legacyIdle) { $legacyIdle } else { 55 }))
+if ($idleMaxM -lt $idleMinM) { $idleMaxM = $idleMinM }
 $pollSec = [int](Get-Prop $ka "poll_seconds" 60)
+
+function New-IdleTargetSeconds {
+    $lo = [int][math]::Round($idleMinM * 60)
+    $hi = [int][math]::Round($idleMaxM * 60)
+    if ($hi -le $lo) { return $lo }
+    return (Get-Random -Minimum $lo -Maximum ($hi + 1))
+}
+
+function Format-Sec {
+    param([int] $Seconds)
+    return ("{0}m{1:d2}s" -f [int][math]::Floor($Seconds / 60), [int]($Seconds % 60))
+}
 $msg = [string](Get-Prop $ka "message" "ACK only: context keep-alive. Do not run tools. Reply with OK.")
 $maxStreak = [int](Get-Prop $ka "max_consecutive_pings" 8)
 $claude = [string](Get-Prop (Get-Prop $cfg "continue") "claude_command" "claude")
@@ -109,12 +128,14 @@ if (-not $Once -and (Test-Path $stopFile)) {
 }
 $lastPingAt = $null
 $pingStreak = 0
+$idleTargetSec = New-IdleTargetSeconds
 
-Write-BridgeLog "PING watch start cwd=$ProjectCwd session=$SessionName idle>=$($idleMin)m poll=${pollSec}s usageFile=$usageFile"
+Write-BridgeLog "PING watch start cwd=$ProjectCwd session=$SessionName idle-target=$(Format-Sec $idleTargetSec) (random $idleMinM-$idleMaxM min) poll=${pollSec}s usageFile=$usageFile"
 if (-not $Once) { Write-Host "Stop: create $stopFile  or Ctrl+C" }
 
 while ($true) {
-    if (Test-Path $stopFile) {
+    # -Once is an explicit manual invocation - it should not obey a STOP file
+    if (-not $Once -and (Test-Path $stopFile)) {
         Write-BridgeLog "STOP file present - exiting ping watch"
         break
     }
@@ -127,36 +148,41 @@ while ($true) {
         $pingStreak = 0
     }
 
-    $idle = $null
-    if ($activity) { $idle = [double]((Get-Date) - $activity).TotalMinutes }
+    $idleSec = $null
+    if ($activity) { $idleSec = [int]((Get-Date) - $activity).TotalSeconds }
 
     if ($snap.rate_limited) {
         Write-BridgeLog "skip ping: rate limited (cache is lost; watcher owns continue)" "DEBUG"
     }
-    elseif ($null -eq $idle) {
+    elseif ($null -eq $idleSec) {
         Write-BridgeLog "skip ping: no session history for cwd $ProjectCwd" "WARN"
     }
-    elseif ($Force -or $idle -ge $idleMin) {
+    elseif ($Force -or $idleSec -ge $idleTargetSec) {
         if ($pingStreak -ge $maxStreak) {
             Write-BridgeLog "max_consecutive_pings=$maxStreak reached - pausing until session activity" "WARN"
         }
         elseif ($WhatIf) {
-            Write-Host ("[WhatIf] Would ping session '{0}' (idle {1:N1}m, usage={2})" -f $SessionName, $idle, $snap.percent)
+            Write-Host ("[WhatIf] Would ping session '{0}' (idle {1}, target {2}, usage={3})" -f `
+                $SessionName, (Format-Sec $idleSec), (Format-Sec $idleTargetSec), $snap.percent)
             $lastPingAt = Get-Date
             $pingStreak++
+            $idleTargetSec = New-IdleTargetSeconds
+            Write-Host "[WhatIf] Next idle target: $(Format-Sec $idleTargetSec)"
         }
         else {
-            $why = if ($Force) { "forced" } else { "idle {0:N1}m >= {1}m" -f $idle, $idleMin }
+            $why = if ($Force) { "forced" } else { "idle $(Format-Sec $idleSec) >= target $(Format-Sec $idleTargetSec)" }
             Write-BridgeLog "Pinging session to refresh cache ($why)"
             if (Invoke-SessionPing) {
                 $lastPingAt = Get-Date
                 $pingStreak++
+                $idleTargetSec = New-IdleTargetSeconds
+                Write-BridgeLog "Next ping after $(Format-Sec $idleTargetSec) of idle (random $idleMinM-$idleMaxM min)"
             }
         }
     }
     else {
-        Write-BridgeLog ("tick: idle {0:N1}m / need {1}m usage={2} limited={3} streak={4}" -f `
-            $idle, $idleMin, $snap.percent, $snap.rate_limited, $pingStreak) "DEBUG"
+        Write-BridgeLog ("tick: idle {0} / target {1} usage={2} limited={3} streak={4}" -f `
+            (Format-Sec $idleSec), (Format-Sec $idleTargetSec), $snap.percent, $snap.rate_limited, $pingStreak) "DEBUG"
     }
 
     if ($Once) { break }

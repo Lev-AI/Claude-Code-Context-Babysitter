@@ -47,11 +47,12 @@
 
   "keepalive": {
     "enabled": true,
-    "ping_after_idle_minutes": 50,
+    "ping_idle_min_minutes": 45,
+    "ping_idle_max_minutes": 55,
     "poll_seconds": 60,
     "message": "ACK only: context keep-alive. Do not run tools. Reply with OK.",
     "max_consecutive_pings": 8,
-    "comment": "Ping-Session.ps1: headless --resume ping refreshes ~1h prompt cache while session is idle. Costs a cache read (~10%) per ping."
+    "comment": "Ping-Session.ps1: headless --resume ping refreshes ~1h prompt cache while session is idle. Fires after a random idle interval between min and max (seconds precision), re-drawn after every ping. Costs a cache read (~10%) per ping."
   },
 
   "maintain": {

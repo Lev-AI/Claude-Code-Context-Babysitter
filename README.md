@@ -13,7 +13,7 @@ re-read.
 
 ```text
 statusLine ──▶ usage.json ──▶ watcher   limit?  wait until reset ─▶ claude --resume <name> -p "continue…"
-                        └───▶ pinger   idle ≥50 min? headless ping ─▶ cache stays warm (~1h TTL refreshed)
+                        └───▶ pinger   idle 45–55 min? headless ping ─▶ cache stays warm (~1h TTL refreshed)
 ```
 
 No WSL, no tmux, no SendKeys — only the official Claude Code CLI.
@@ -51,10 +51,11 @@ Full guide: **[INSTRUCTIONS.md](experiments/powershell_auto_continue/INSTRUCTION
 2. **Watcher** (`Start-HeavyWatch.ps1`) — polls `usage.json`; on limit it waits
    until `resets_at` + margin, then relaunches the *same named session*:
    `claude --resume <name> -p "continue…"` (retries, logs, toast notifications).
-3. **Cache pinger** (`Ping-Session.ps1`) — when the session has been idle
-   ~50 minutes, sends a headless ACK ping that refreshes the ~1-hour prompt
-   cache TTL. Measured live: a ping read 20 207 tokens from cache and wrote
-   only 76 — about 7× cheaper than a cold resume.
+3. **Cache pinger** (`Ping-Session.ps1`) — when the session has been idle for
+   a random 45–55 minutes (seconds precision, re-drawn after every ping),
+   sends a headless ACK ping that refreshes the ~1-hour prompt cache TTL.
+   Measured live: a ping read 20 207 tokens from cache and wrote only 76 —
+   about 7× cheaper than a cold resume.
 
 ## 📋 Requirements
 

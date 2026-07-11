@@ -141,8 +141,10 @@ full rewrite:
   -SessionName "my-task"
 ```
 
-Pings when the session history hasn't changed for `ping_after_idle_minutes`
-(50 min); stays silent when rate_limited (the cache is already lost — that's
+Pings when the session history hasn't changed for a random interval between
+`ping_idle_min_minutes` and `ping_idle_max_minutes` (45–55 min, seconds
+precision, re-drawn after every ping); stays silent when rate_limited (the
+cache is already lost — that's
 the watcher's job). Stop with the same `.state\STOP`. One-off ping: `-Once -Force`.
 
 ### 4. Manual continue (test)
