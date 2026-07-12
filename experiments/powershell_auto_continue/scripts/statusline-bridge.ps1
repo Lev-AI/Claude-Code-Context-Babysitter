@@ -51,7 +51,15 @@ $rateLimited = $false
 if ($data.rate_limits -and $data.rate_limits.five_hour) {
     $fh = $data.rate_limits.five_hour
     if ($null -ne $fh.used_percentage) {
-        $five = [double]$fh.used_percentage
+        # A real percentage is a finite number in 0..100. Claude Code sometimes
+        # emits a unix epoch here for an empty 5h window (mirrors resets_at),
+        # which would sail past our 99.5 limit and force a false LIMIT/continue.
+        # Discard anything out of range so only genuine usage sets $five.
+        # See anthropics/claude-code#52326.
+        $pct = $fh.used_percentage -as [double]
+        if ($null -ne $pct -and -not [double]::IsNaN($pct) -and -not [double]::IsInfinity($pct) -and $pct -ge 0 -and $pct -le 100) {
+            $five = $pct
+        }
     }
     if ($null -ne $fh.resets_at) {
         $resetUnix = [double]$fh.resets_at
