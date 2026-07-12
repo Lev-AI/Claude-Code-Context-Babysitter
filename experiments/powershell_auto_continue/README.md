@@ -1,5 +1,7 @@
 # PowerShell Auto-Continue — Experiment
 
+> ⚠️ **Disclaimer — use at your own risk.** This project is a **proof-of-concept demonstrator of an engineering idea**. It has **not** been reviewed for compliance with Anthropic's Terms of Service, Usage Policies, or any other applicable agreements. Use it **entirely at your own risk** — you alone are responsible for ensuring your usage complies with Anthropic's terms.
+
 A standalone experiment within **Claude Code Session Bridge**.
 
 | | |

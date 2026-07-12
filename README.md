@@ -5,6 +5,8 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![No WSL required](https://img.shields.io/badge/WSL-not%20required-orange)
 
+> ⚠️ **Disclaimer — use at your own risk.** This project is a **proof-of-concept demonstrator of an engineering idea**. It has **not** been reviewed for compliance with Anthropic's Terms of Service, Usage Policies, or any other applicable agreements. Use it **entirely at your own risk** — you alone are responsible for ensuring your usage complies with Anthropic's terms.
+
 **Unattended Claude Code sessions on native Windows.** When your Pro/Max
 5-hour usage limit hits, the babysitter waits for the reset and resumes the
 same session automatically. While the session idles, it keeps the prompt
