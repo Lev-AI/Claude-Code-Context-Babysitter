@@ -63,6 +63,13 @@ $stopFile = Join-Path (Get-ExperimentRoot) ".state\STOP"
 $watcher = Join-Path $PSScriptRoot "Start-HeavyWatch.ps1"
 $pinger = Join-Path $PSScriptRoot "Ping-Session.ps1"
 
+# Config summary for the two opt-in behaviors handled by the children
+$cfg = Read-HeavyConfig -ConfigPath $ConfigPath
+$power = Get-BridgePowerConfig -Config $cfg
+$stopCfg = Get-Prop $cfg "stop"
+$stopEnabled = [bool](Get-Prop $stopCfg "enabled" $false)
+$stopPct = [double](Get-Prop (Get-Prop $cfg "thresholds") "stop_percent" 88.0)
+
 function Get-ChildArgs {
     param([string] $Script)
     $list = @(
@@ -81,6 +88,8 @@ Write-Host "Session:  $SessionName"
 Write-Host "Watcher:  $watcher"
 Write-Host "Pinger:   $(if ($NoPing) { 'disabled (-NoPing)' } else { $pinger })"
 Write-Host "Claude:   $(if ($NoClaudeWindow) { 'not opened (-NoClaudeWindow)' } else { "claude -n $SessionName" })"
+Write-Host "Power:    $(if ($power.prevent_sleep) { "prevent_sleep on (scope=$($power.scope))" } else { 'prevent_sleep off (OS sleep policy applies)' })"
+Write-Host "SoftStop: $(if ($stopEnabled) { "at $stopPct% (Ctrl+C to the Claude window)" } else { 'disabled' })"
 
 if ($WhatIf) {
     Write-Host "[WhatIf] Would remove stale STOP (if present): $stopFile"
@@ -90,6 +99,7 @@ if ($WhatIf) {
     }
     if (-not $NoClaudeWindow) {
         Write-Host "[WhatIf] Would open window: claude -n $SessionName (cwd $ProjectCwd)"
+        Write-Host "[WhatIf] Would record its PID in .state\claude_window.json (soft-stop target)"
     }
     exit 0
 }
@@ -108,10 +118,17 @@ if (-not $NoPing) {
 }
 
 if (-not $NoClaudeWindow) {
-    Start-Process powershell -ArgumentList @(
+    $c = Start-Process powershell -ArgumentList @(
         "-NoExit", "-Command", "claude -n $SessionName"
-    ) -WorkingDirectory $ProjectCwd | Out-Null
-    Write-BridgeLog "Babysitter: claude window opened (claude -n $SessionName)"
+    ) -WorkingDirectory $ProjectCwd -PassThru
+    # Record the window PID so the watcher's soft-stop targets exactly this window
+    Write-JsonFile -Path (Get-DefaultClaudeWindowPath) -Object ([ordered]@{
+        pid          = $c.Id
+        session_name = $SessionName
+        project_cwd  = $ProjectCwd
+        started_at   = (Get-Date).ToString("o")
+    })
+    Write-BridgeLog "Babysitter: claude window opened PID=$($c.Id) (claude -n $SessionName)"
 }
 
 Write-Host ""

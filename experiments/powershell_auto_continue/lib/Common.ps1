@@ -19,6 +19,11 @@ function Get-DefaultStatePath {
     return (Join-Path (Get-ExperimentRoot) ".state\runtime.json")
 }
 
+function Get-DefaultClaudeWindowPath {
+    # Written by Start-Babysitter, read by the watcher's soft-stop
+    return (Join-Path (Get-ExperimentRoot) ".state\claude_window.json")
+}
+
 function Get-DefaultLogDir {
     return (Join-Path (Get-ExperimentRoot) ".state\logs")
 }
@@ -266,3 +271,6 @@ function Read-HeavyConfig {
     }
     return $cfg
 }
+
+# Win32 power/console helpers (prevent-sleep, console Ctrl+C)
+. (Join-Path $PSScriptRoot "Power.ps1")

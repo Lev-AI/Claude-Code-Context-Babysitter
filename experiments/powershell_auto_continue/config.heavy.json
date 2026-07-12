@@ -13,9 +13,27 @@
   "comment_session": "Set session_name if you start with: claude -n my-task",
 
   "thresholds": {
+    "stop_percent": 88,
     "maintain_percent": 95,
     "limit_percent": 99.5,
     "usage_file_max_age_seconds": 900
+  },
+
+  "stop": {
+    "enabled": true,
+    "method": "ctrl_c",
+    "comment_method": "ctrl_c | notify_only",
+    "once_per_reset": true,
+    "notify": true,
+    "comment": "Soft-stop: at thresholds.stop_percent the watcher sends Ctrl+C to the interactive Claude window recorded by Start-Babysitter (that PID only), so the last percent of the 5h window is not burned mid-turn. The pinger keeps the cache warm until the reset; wait+continue at the hard limit is unchanged."
+  },
+
+  "power": {
+    "prevent_sleep": false,
+    "prevent_sleep_scope": "babysitter",
+    "comment_scope": "babysitter | wait_only | watcher | pinger | all_children",
+    "keep_display_on": false,
+    "comment": "SetThreadExecutionState(ES_SYSTEM_REQUIRED) while watcher/pinger run, so Windows idle auto-sleep cannot freeze them (the display may still turn off). Default false so install is non-invasive; enable for unattended/overnight runs on AC power."
   },
 
   "watch": {
@@ -51,6 +69,20 @@
     "ping_idle_max_minutes": 55,
     "poll_seconds": 60,
     "message": "ACK only: context keep-alive. Do not run tools. Reply with OK.",
+    "messages": [
+      "ACK only: context keep-alive. Do not run tools. Reply with OK.",
+      "Keepalive ping. No tools. Reply: OK.",
+      "Session warm-up. Do not change code. Reply with OK only.",
+      "Cache refresh. Ignore all tasks. Answer: OK.",
+      "Heartbeat. Do not use tools or edit files. Reply OK.",
+      "Idle maintain. No investigation. Reply with a single OK.",
+      "Prompt-cache touch. Stay idle. Respond: OK.",
+      "Standby check. Do not continue the project. Reply OK.",
+      "Lightweight ACK. Zero tool calls. Reply: OK.",
+      "Context hold. No PROGRESS updates. Reply OK."
+    ],
+    "message_pick": "random_no_repeat",
+    "comment_message_pick": "random_no_repeat | random | rotate; legacy 'message' is the fallback when 'messages' is empty",
     "max_consecutive_pings": 8,
     "comment": "Ping-Session.ps1: headless --resume ping refreshes ~1h prompt cache while session is idle. Fires after a random idle interval between min and max (seconds precision), re-drawn after every ping. Costs a cache read (~10%) per ping."
   },

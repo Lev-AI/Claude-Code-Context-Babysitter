@@ -66,6 +66,9 @@ $margin = [int](Get-Prop $wait "margin_seconds" 90)
 $maxWaitH = [double](Get-Prop $wait "max_wait_hours" 6)
 $chunk = [int](Get-Prop $wait "chunk_sleep_seconds" 30)
 
+$power = Get-BridgePowerConfig -Config $cfg
+$holdWait = Test-BridgePowerScope -Power $power -Component "wait"
+
 Write-BridgeLog "HEAVY continue: cwd=$($state.project_cwd) session=$($state.session_name) reset=$resetDt usage=$($snap.percent)% limited=$($snap.rate_limited)"
 
 # Compute the wait decision up front, with NO side effects yet, so -WhatIf can
@@ -100,6 +103,9 @@ if ($willWait) {
     if (Get-Prop $notify "on_limit_detected") {
         Show-BridgeNotify -Text "Waiting for Claude limit reset at $resetDt" -Beep:([bool](Get-Prop $notify "beep"))
     }
+    # Keep the machine awake through the wait (re-asserts the hold when the
+    # calling watcher already owns it in the same process)
+    if ($holdWait) { [void](Enable-BridgePreventSleep -KeepDisplayOn:($power.keep_display_on)) }
     $left = [math]::Ceiling($delay)
     while ($left -gt 0) {
         $step = [math]::Min($chunk, $left)
@@ -109,6 +115,9 @@ if ($willWait) {
             Write-BridgeLog "Wait remaining ~${left}s"
         }
     }
+    # wait_only owns the hold exclusively; under broader scopes the watcher /
+    # pinger processes keep holding it and must not be cleared from here
+    if ($holdWait -and $power.scope -eq "wait_only") { Disable-BridgePreventSleep }
 }
 
 # Clear rate_limited in usage file

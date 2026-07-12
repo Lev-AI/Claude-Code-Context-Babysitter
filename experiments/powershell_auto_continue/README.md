@@ -59,6 +59,7 @@ powershell_auto_continue/
 ├── config.example.json       ← light example
 ├── lib/
 │   ├── Common.ps1            ← usage, state, log, notify
+│   ├── Power.ps1             ← prevent-sleep + console Ctrl+C (Win32)
 │   └── ClaudeLaunch.ps1      ← headless + interactive launch
 ├── scripts/
 │   ├── Install-Heavy.ps1     ← setup + statusLine snippet
@@ -186,7 +187,15 @@ the watcher's job). Stop with the same `.state\STOP`. One-off ping: `-Once -Forc
 Important fields in `config.heavy.json`:
 
 - `project_cwd` / `session_name` — can be set in the config or via the CLI
-- `thresholds.maintain_percent` (95), `limit_percent` (99.5)
+- `thresholds.stop_percent` (88), `maintain_percent` (95), `limit_percent` (99.5)
+- `stop.enabled` — soft-stop: at `stop_percent` the watcher sends Ctrl+C to the
+  interactive Claude window started by `Start-Babysitter` (only that recorded
+  PID), so the last percent isn't burned mid-turn
+- `power.prevent_sleep` — hold `SetThreadExecutionState` while watcher/pinger
+  run, so Windows idle auto-sleep can't freeze them (off by default; enable
+  for unattended/overnight runs on AC)
+- `keepalive.messages` + `message_pick` — pool of keepalive texts
+  (`random_no_repeat` by default) so pings don't repeat the same message
 - `continue.mode`: `headless` \| `interactive` \| `both`
 - `wait.margin_seconds` (buffer after reset)
 

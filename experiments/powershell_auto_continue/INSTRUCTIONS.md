@@ -92,20 +92,45 @@ automatically — no manual cleanup needed.
 
 ## What happens at the limit (without you)
 
-1. statusLine writes "100%, resets at HH:MM" to `usage.json`.
-2. The watcher shows a notification and waits until the reset + 90 seconds.
-3. It launches `claude --resume <name> -p "Continue… re-read PROGRESS.md…"`.
-4. The session continues working; logs go to `.state\logs\YYYY-MM-DD.log`.
+1. At **~88%** (`thresholds.stop_percent`) the watcher **soft-stops** the
+   Claude window it started (a Ctrl+C to that window's recorded PID, once per
+   usage window) — so the last percent isn't burned by one more huge turn.
+   The window stays open; the pinger keeps the cache warm. Disable with
+   `stop.enabled: false`.
+2. statusLine writes "100%, resets at HH:MM" to `usage.json`.
+3. The watcher shows a notification and waits until the reset + 90 seconds.
+4. It launches `claude --resume <name> -p "Continue… re-read PROGRESS.md…"`.
+5. The session continues working; logs go to `.state\logs\YYYY-MM-DD.log`.
 
 The pinger stays silent at the limit (the cache is already lost) — it's
 useful **before** the limit and during pauses.
 
 ---
 
+## Unattended / overnight: don't let Windows sleep
+
+If the PC goes to auto-sleep while you're away, the watcher and pinger are
+**frozen** — no pings, no wait countdown, cold cache after wake. Enable in
+`config.local.json`:
+
+```json
+"power": { "prevent_sleep": true }
+```
+
+While the watcher/pinger are running, the system won't auto-sleep (the
+display may still turn off; Win+L lock is fine). On exit (STOP file, Ctrl+C)
+normal power behavior returns. Best on AC power — on battery this drains it,
+which is why the default is `false`. Note: this does **not** make the
+continue after a multi-hour limit warm — the pinger intentionally stays
+silent while rate-limited.
+
+---
+
 ## Cost-saving rules (important)
 
 - **Stop heavy work at ~95%** — the remaining 5% is needed for the cache
-  pinger to keep the cache alive until the reset.
+  pinger to keep the cache alive until the reset. With `stop.enabled` the
+  watcher automates this at ~88% (soft-stop).
 - **Run `/compact` at ~85%** — after the reset, the continuation will
   re-read a short history instead of a huge one.
 - **Keep PROGRESS.md always up to date** — it's how the revived session

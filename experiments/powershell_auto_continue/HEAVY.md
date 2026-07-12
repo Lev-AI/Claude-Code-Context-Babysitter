@@ -8,9 +8,12 @@ Not "like tmux in Cursor," but:
 ```text
 statusLine rate_limits → usage.json
         → Start-HeavyWatch (poll)
+        → stop_percent (88) → soft-stop: Ctrl+C to the recorded Claude window
         → limit → wait until resets_at
         → claude -c | --resume name  +  -p "continue…"
         → retries + logs + notify
+(power.prevent_sleep: hold SetThreadExecutionState so idle auto-sleep
+ can't freeze the watcher/pinger/wait)
 ```
 
 ---
@@ -93,12 +96,14 @@ Remove-Item .state\STOP -ErrorAction SilentlyContinue
 |------|------|
 | `config.heavy.json` / `config.local.json` | settings |
 | `lib/Common.ps1` | usage/state/log |
+| `lib/Power.ps1` | prevent-sleep (`SetThreadExecutionState`) + console Ctrl+C |
 | `lib/ClaudeLaunch.ps1` | headless + interactive launch |
-| `scripts/Start-HeavyWatch.ps1` | main loop |
+| `scripts/Start-HeavyWatch.ps1` | main loop (soft-stop, MAINTAIN, wait+continue) |
 | `scripts/Invoke-HeavyContinue.ps1` | wait + continue |
 | `scripts/Install-Heavy.ps1` | setup |
 | `scripts/statusline-bridge.ps1` | 5h % → usage.json |
 | `.state/runtime.json` | phase, counts |
+| `.state/claude_window.json` | Claude window PID recorded by `Start-Babysitter` (soft-stop target) |
 | `.state/logs/YYYY-MM-DD.log` | audit trail |
 
 ---
